@@ -64,24 +64,26 @@ function Invoke-Menu {
         Write-Host ""
         Write-Host "Warranty Label Printer" -ForegroundColor Cyan
         Write-Host "  1. Start CLI printer mode"
-        Write-Host "  2. Start web mode"
-        Write-Host "  3. Start safe virtual-output mode"
-        Write-Host "  4. Update application (git pull)"
-        Write-Host "  5. Run diagnostics"
-        Write-Host "  6. Run printer setup"
-        Write-Host "  7. Run environment setup"
+        Write-Host "  2. Start web mode (Local network)"
+        Write-Host "  3. Start web mode with secure Tunnel (Phone camera scanner)"
+        Write-Host "  4. Start safe virtual-output mode"
+        Write-Host "  5. Update application (git pull)"
+        Write-Host "  6. Run diagnostics"
+        Write-Host "  7. Run printer setup"
+        Write-Host "  8. Run environment setup"
         Write-Host "  0. Exit"
         $choice = Read-Host "Select an option"
         switch ($choice) {
             "1" { & $PSCommandPath cli; return }
             "2" { & $PSCommandPath web; return }
-            "3" { & $PSCommandPath safe; return }
-            "4" { & $PSCommandPath update; Read-Host "Press Enter to continue" | Out-Null }
-            "5" { & $PSCommandPath doctor; Read-Host "Press Enter to continue" | Out-Null }
-            "6" { & $PSCommandPath printer; Read-Host "Press Enter to continue" | Out-Null }
-            "7" { & $PSCommandPath setup; Read-Host "Press Enter to continue" | Out-Null }
+            "3" { & $PSCommandPath web -Tunnel; return }
+            "4" { & $PSCommandPath safe; return }
+            "5" { & $PSCommandPath update; Read-Host "Press Enter to continue" | Out-Null }
+            "6" { & $PSCommandPath doctor; Read-Host "Press Enter to continue" | Out-Null }
+            "7" { & $PSCommandPath printer; Read-Host "Press Enter to continue" | Out-Null }
+            "8" { & $PSCommandPath setup; Read-Host "Press Enter to continue" | Out-Null }
             "0" { return }
-            default { Write-Host "Choose a number from 0 to 7." -ForegroundColor Yellow }
+            default { Write-Host "Choose a number from 0 to 8." -ForegroundColor Yellow }
         }
     }
 }
