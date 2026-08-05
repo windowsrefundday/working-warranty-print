@@ -1,6 +1,6 @@
 param(
-    [ValidateSet("help", "setup", "doctor", "printer", "safe", "cli", "web", "verify")]
-    [string]$Command = "help",
+    [ValidateSet("menu", "help", "setup", "doctor", "printer", "safe", "cli", "web", "verify")]
+    [string]$Command = "menu",
     [int]$Port = 9191,
     [switch]$Tunnel,
     [switch]$WithTunnelRuntime,
@@ -19,6 +19,7 @@ function Show-Help {
 Warranty Label Printer - Windows Operator Tool
 
 Usage:
+  .\warranty-windows.ps1              Interactive menu
   .\warranty-windows.ps1 setup
   .\warranty-windows.ps1 setup -WithTunnelRuntime
   .\warranty-windows.ps1 doctor
@@ -56,7 +57,35 @@ function Assert-ExitCode {
     }
 }
 
+function Invoke-Menu {
+    while ($true) {
+        Write-Host ""
+        Write-Host "Warranty Label Printer" -ForegroundColor Cyan
+        Write-Host "  1. Start CLI printer mode"
+        Write-Host "  2. Start web mode"
+        Write-Host "  3. Start safe virtual-output mode"
+        Write-Host "  4. Run diagnostics"
+        Write-Host "  5. Run printer setup"
+        Write-Host "  6. Run environment setup"
+        Write-Host "  0. Exit"
+        $choice = Read-Host "Select an option"
+        switch ($choice) {
+            "1" { & $PSCommandPath cli; return }
+            "2" { & $PSCommandPath web; return }
+            "3" { & $PSCommandPath safe; return }
+            "4" { & $PSCommandPath doctor; Read-Host "Press Enter to continue" | Out-Null }
+            "5" { & $PSCommandPath printer; Read-Host "Press Enter to continue" | Out-Null }
+            "6" { & $PSCommandPath setup; Read-Host "Press Enter to continue" | Out-Null }
+            "0" { return }
+            default { Write-Host "Choose a number from 0 to 6." -ForegroundColor Yellow }
+        }
+    }
+}
+
 switch ($Command) {
+    "menu" {
+        Invoke-Menu
+    }
     "help" {
         Show-Help
     }
