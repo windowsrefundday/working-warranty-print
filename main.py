@@ -128,6 +128,51 @@ def launch_https_tunnel(port: int, timeout_seconds: float = 20.0):
             stop_tunnel_process(tunnel_process)
 
 
+GIT_PULL_INTERVAL_SECONDS = 6 * 60 * 60
+
+
+def run_git_pull() -> bool:
+    """Attempt a git pull from origin main; fail gracefully if offline or clean."""
+    git_bin = shutil.which("git")
+    if not git_bin:
+        return False
+    repo_root = os.path.dirname(os.path.abspath(__file__))
+    try:
+        result = subprocess.run(
+            [git_bin, "pull", "origin", "main"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode == 0:
+            if "Already up to date." not in result.stdout:
+                print(f"[GIT UPDATE] {result.stdout.strip()}")
+                return True
+        return False
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def _background_git_pull_loop(stop_event: threading.Event) -> None:
+    """Schedule git pull every 6 hours while the app is running."""
+    while not stop_event.wait(GIT_PULL_INTERVAL_SECONDS):
+        run_git_pull()
+
+
+def start_background_git_updater() -> tuple[threading.Event, threading.Thread]:
+    """Start daemon thread for periodic 6-hour git pull updates."""
+    stop_event = threading.Event()
+    thread = threading.Thread(
+        target=_background_git_pull_loop,
+        args=(stop_event,),
+        name="git-auto-updater",
+        daemon=True,
+    )
+    thread.start()
+    return stop_event, thread
+
+
 def main():
     parser = argparse.ArgumentParser(description="Universal Warranty Lookup & Label Printer Application")
     parser.add_argument("--mode", choices=["cli", "web"], default="cli", help="Interface mode to run (cli or web). Default: cli")
@@ -161,6 +206,11 @@ def main():
 
     print("Created by Joel Manuel for the VA 2026")
     print("Thanks to Steve, Anthony, Chris, and Ernes")
+
+    if not os.environ.get("WARRANTY_LABEL_DISABLE_AUTO_UPDATE"):
+        run_git_pull()
+
+    stop_update_event, _ = start_background_git_updater()
 
     if args.setup_printer:
         engine = WarrantyEngine()
