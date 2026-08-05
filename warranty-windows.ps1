@@ -62,6 +62,7 @@ function Assert-ExitCode {
 }
 
 function Invoke-Menu {
+    $emptyCount = 0
     while ($true) {
         Write-Host ""
         Write-Host "Warranty Label Printer" -ForegroundColor Cyan
@@ -75,23 +76,35 @@ function Invoke-Menu {
         Write-Host "  8. Run environment setup"
         Write-Host "  9. Create Windows shortcuts (Start Menu / Desktop / Startup)"
         Write-Host "  0. Exit"
-        $choice = Read-Host "Select an option"
+        $rawChoice = Read-Host "Select an option"
+        if ($null -eq $rawChoice) {
+            return
+        }
+        $choice = $rawChoice.Trim()
+        if ($choice -eq "") {
+            $emptyCount++
+            if ($emptyCount -ge 3) {
+                return
+            }
+            continue
+        }
+        $emptyCount = 0
         switch ($choice) {
             "1" { & $PSCommandPath cli; return }
             "2" { & $PSCommandPath web; return }
             "3" { & $PSCommandPath web -Tunnel; return }
             "4" { & $PSCommandPath safe; return }
-            "5" { & $PSCommandPath update; $null = Read-Host "Press Enter to continue..." }
-            "6" { & $PSCommandPath doctor; $null = Read-Host "Press Enter to continue..." }
-            "7" { & $PSCommandPath printer; $null = Read-Host "Press Enter to continue..." }
-            "8" { & $PSCommandPath setup; $null = Read-Host "Press Enter to continue..." }
+            "5" { & $PSCommandPath update; $null = Read-Host "Press Enter to continue..."; return }
+            "6" { & $PSCommandPath doctor; $null = Read-Host "Press Enter to continue..."; return }
+            "7" { & $PSCommandPath printer; $null = Read-Host "Press Enter to continue..."; return }
+            "8" { & $PSCommandPath setup; $null = Read-Host "Press Enter to continue..."; return }
             "9" {
                 Write-Host ""
                 Write-Host "Create Windows Shortcuts:" -ForegroundColor Cyan
                 Write-Host "  1. Start Menu (Enables Pinning to Taskbar or Start)"
                 Write-Host "  2. Desktop Shortcut"
                 Write-Host "  3. Auto-start Web Server on Windows Login"
-                $scChoice = Read-Host "Select option (1-3)"
+                $scChoice = (Read-Host "Select option (1-3)").Trim()
                 switch ($scChoice) {
                     "1" { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\tools\create_shortcut.ps1" -StartMenu }
                     "2" { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\tools\create_shortcut.ps1" -Desktop }
@@ -99,6 +112,7 @@ function Invoke-Menu {
                     default { Write-Host "Invalid choice." -ForegroundColor Yellow }
                 }
                 $null = Read-Host "Press Enter to continue..."
+                return
             }
             "0" { return }
             default { Write-Host "Choose a number from 0 to 9." -ForegroundColor Yellow }
