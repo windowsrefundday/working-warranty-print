@@ -21,6 +21,10 @@ command -v "$PYTHON_BIN" >/dev/null || {
     printf '%s\n' "Python 3.11 or newer was not found. Set PYTHON_BIN or install Python 3.11+." >&2
     exit 1
 }
-"$PYTHON_BIN" tools/setup.py "${SETUP_ARGS[@]}"
+if [ ${#SETUP_ARGS[@]} -gt 0 ]; then
+  "$PYTHON_BIN" tools/setup.py "${SETUP_ARGS[@]}"
+else
+  "$PYTHON_BIN" tools/setup.py
+fi
 
 printf '%s\n' "Setup complete. Start the scanner with ./run-macos.sh"
