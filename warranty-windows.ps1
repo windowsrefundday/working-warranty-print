@@ -81,10 +81,10 @@ function Invoke-Menu {
             "2" { & $PSCommandPath web; return }
             "3" { & $PSCommandPath web -Tunnel; return }
             "4" { & $PSCommandPath safe; return }
-            "5" { & $PSCommandPath update; Read-Host "Press Enter to continue" | Out-Null }
-            "6" { & $PSCommandPath doctor; Read-Host "Press Enter to continue" | Out-Null }
-            "7" { & $PSCommandPath printer; Read-Host "Press Enter to continue" | Out-Null }
-            "8" { & $PSCommandPath setup; Read-Host "Press Enter to continue" | Out-Null }
+            "5" { & $PSCommandPath update; $null = Read-Host "Press Enter to continue..." }
+            "6" { & $PSCommandPath doctor; $null = Read-Host "Press Enter to continue..." }
+            "7" { & $PSCommandPath printer; $null = Read-Host "Press Enter to continue..." }
+            "8" { & $PSCommandPath setup; $null = Read-Host "Press Enter to continue..." }
             "9" {
                 Write-Host ""
                 Write-Host "Create Windows Shortcuts:" -ForegroundColor Cyan
@@ -98,7 +98,7 @@ function Invoke-Menu {
                     "3" { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\tools\create_shortcut.ps1" -Startup -Mode web }
                     default { Write-Host "Invalid choice." -ForegroundColor Yellow }
                 }
-                Read-Host "Press Enter to continue" | Out-Null
+                $null = Read-Host "Press Enter to continue..."
             }
             "0" { return }
             default { Write-Host "Choose a number from 0 to 9." -ForegroundColor Yellow }
