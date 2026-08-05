@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("menu", "help", "setup", "doctor", "printer", "safe", "cli", "web", "verify", "update")]
+    [ValidateSet("menu", "help", "setup", "doctor", "printer", "safe", "cli", "web", "verify", "update", "shortcut")]
     [string]$Command = "menu",
     [int]$Port = 9191,
     [switch]$Tunnel,
@@ -22,6 +22,7 @@ Usage:
   .\warranty-windows.bat              Double-clickable / Auto-bypasses ExecutionPolicy
   .\warranty-windows.ps1              Interactive menu
   .\warranty-windows.ps1 update       Pull latest source from git
+  .\warranty-windows.ps1 shortcut     Create Windows Start Menu / Desktop / Startup shortcuts
   .\warranty-windows.ps1 setup
   .\warranty-windows.ps1 setup -WithTunnelRuntime
   .\warranty-windows.ps1 doctor
@@ -33,6 +34,7 @@ Usage:
   .\warranty-windows.ps1 verify
 
 Commands:
+  shortcut Create Windows shortcuts in Start Menu, Desktop, or Startup folder
   update   Pull latest source code updates directly from git main branch
   setup    Create .venv, install dependencies/Chromium, and diagnose
   doctor   Read-only check of Python, Chromium, storage, driver, and queue
@@ -71,6 +73,7 @@ function Invoke-Menu {
         Write-Host "  6. Run diagnostics"
         Write-Host "  7. Run printer setup"
         Write-Host "  8. Run environment setup"
+        Write-Host "  9. Create Windows shortcuts (Start Menu / Desktop / Startup)"
         Write-Host "  0. Exit"
         $choice = Read-Host "Select an option"
         switch ($choice) {
@@ -82,8 +85,23 @@ function Invoke-Menu {
             "6" { & $PSCommandPath doctor; Read-Host "Press Enter to continue" | Out-Null }
             "7" { & $PSCommandPath printer; Read-Host "Press Enter to continue" | Out-Null }
             "8" { & $PSCommandPath setup; Read-Host "Press Enter to continue" | Out-Null }
+            "9" {
+                Write-Host ""
+                Write-Host "Create Windows Shortcuts:" -ForegroundColor Cyan
+                Write-Host "  1. Start Menu (Enables Pinning to Taskbar or Start)"
+                Write-Host "  2. Desktop Shortcut"
+                Write-Host "  3. Auto-start Web Server on Windows Login"
+                $scChoice = Read-Host "Select option (1-3)"
+                switch ($scChoice) {
+                    "1" { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\tools\create_shortcut.ps1" -StartMenu }
+                    "2" { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\tools\create_shortcut.ps1" -Desktop }
+                    "3" { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\tools\create_shortcut.ps1" -Startup -Mode web }
+                    default { Write-Host "Invalid choice." -ForegroundColor Yellow }
+                }
+                Read-Host "Press Enter to continue" | Out-Null
+            }
             "0" { return }
-            default { Write-Host "Choose a number from 0 to 8." -ForegroundColor Yellow }
+            default { Write-Host "Choose a number from 0 to 9." -ForegroundColor Yellow }
         }
     }
 }
@@ -101,6 +119,10 @@ switch ($Command) {
         Assert-ExitCode "Git pull"
         Write-Host "Application updated to latest git main." -ForegroundColor Green
         exit 0
+    }
+    "shortcut" {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\tools\create_shortcut.ps1" @ExtraArgs
+        exit $LASTEXITCODE
     }
     "setup" {
         $setupArgs = @()
