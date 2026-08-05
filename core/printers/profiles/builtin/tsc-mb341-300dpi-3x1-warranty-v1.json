@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "profile_id": "tsc-mb341-300dpi-3x1-warranty-v1",
+  "status": "candidate",
+  "layout_id": "warranty-expiration-emphasis-v1",
+  "sensor_calibration": {
+    "label_dots": 300,
+    "gap_dots": 35
+  },
+  "profile": {
+    "queue_name": "TSC_MB341",
+    "model": "MB341",
+    "dpi": 300,
+    "width_mm": 76.2,
+    "height_mm": 25.4,
+    "gap_mm": 3.0,
+    "darkness": 11,
+    "speed": 50,
+    "copies": 1,
+    "offset_x_mm": 2.4,
+    "shift_y_mm": 0.0
+  }
+}

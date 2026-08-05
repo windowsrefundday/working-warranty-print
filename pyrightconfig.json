@@ -1,0 +1,15 @@
+{
+  "include": [
+    "core/",
+    "interfaces/",
+    "main.py",
+    "tests/",
+    "tools/"
+  ],
+  "exclude": [
+    ".venv/",
+    "node_modules/",
+    "core/vendors/external/",
+    "labels/"
+  ]
+}

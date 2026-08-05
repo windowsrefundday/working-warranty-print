@@ -1,0 +1,33 @@
+.venv/
+node_modules/
+__pycache__/
+*.py[cod]
+
+# Operator data and credentials
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.pem
+*.p12
+*.pfx
+printer_binding.json
+tsc_profile.json
+labels/
+
+# Logs, browser state, generated reports, and local agent state
+*.log
+playwright-report/
+test-results/
+.alumnium/
+.codex-opencode/
+.omx/
+.playwright-cli/
+.DS_Store
+
+# Third-party working copies are installed outside this checkout.
+core/vendors/external/

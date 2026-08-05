@@ -1,0 +1,13 @@
+{
+  "name": "warranty-label-printer-runtime",
+  "private": true,
+  "dependencies": {
+    "localtunnel": "2.0.2"
+  },
+  "devDependencies": {
+    "pyright": "1.1.411"
+  },
+  "overrides": {
+    "axios": "1.19.0"
+  }
+}
