@@ -52,6 +52,19 @@ def stop_tunnel_process(tunnel_process: subprocess.Popen) -> None:
 def launch_https_tunnel(port: int, timeout_seconds: float = 20.0):
     """Launch localtunnel and return its process and verified HTTPS URL."""
     if not os.path.isfile(LOCAL_TUNNEL_ENTRYPOINT):
+        npm_bin = shutil.which("npm") or shutil.which("npm.cmd")
+        if npm_bin and shutil.which("node"):
+            try:
+                subprocess.run(
+                    [npm_bin, "ci", "--omit=dev", "--ignore-scripts"],
+                    cwd=str(Path(__file__).resolve().parent),
+                    check=True,
+                    timeout=45,
+                    capture_output=True,
+                )
+            except Exception:
+                pass
+    if not os.path.isfile(LOCAL_TUNNEL_ENTRYPOINT):
         raise RuntimeError(
             "The locked localtunnel runtime is not installed. Run the platform "
             "setup script before using --tunnel."

@@ -48,7 +48,8 @@ Assert-LastCommand "Python compatibility check"
 
 Write-Step 2 "Running the shared read-only setup"
 $setupArgs = @()
-if ($WithTunnelRuntime) {
+$hasNpm = [bool](Get-Command npm -ErrorAction SilentlyContinue)
+if ($WithTunnelRuntime -or $hasNpm) {
     $setupArgs += "--with-tunnel-runtime"
 }
 if ($BrowserCaCert) {
