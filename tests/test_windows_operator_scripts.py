@@ -40,7 +40,8 @@ class WindowsOperatorScriptTests(unittest.TestCase):
         self.assertIn('[string]$Command = "menu"', script)
         self.assertIn("function Invoke-Menu", script)
         self.assertIn("1. Start CLI printer mode", script)
-        self.assertIn("6. Run environment setup", script)
+        self.assertIn("4. Update application (git pull)", script)
+        self.assertIn("7. Run environment setup", script)
         self.assertIn('& $PSCommandPath cli', script)
         self.assertIn('"menu" {', script)
 

@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("menu", "help", "setup", "doctor", "printer", "safe", "cli", "web", "verify")]
+    [ValidateSet("menu", "help", "setup", "doctor", "printer", "safe", "cli", "web", "verify", "update")]
     [string]$Command = "menu",
     [int]$Port = 9191,
     [switch]$Tunnel,
@@ -19,7 +19,9 @@ function Show-Help {
 Warranty Label Printer - Windows Operator Tool
 
 Usage:
+  .\warranty-windows.bat              Double-clickable / Auto-bypasses ExecutionPolicy
   .\warranty-windows.ps1              Interactive menu
+  .\warranty-windows.ps1 update       Pull latest source from git
   .\warranty-windows.ps1 setup
   .\warranty-windows.ps1 setup -WithTunnelRuntime
   .\warranty-windows.ps1 doctor
@@ -31,6 +33,7 @@ Usage:
   .\warranty-windows.ps1 verify
 
 Commands:
+  update   Pull latest source code updates directly from git main branch
   setup    Create .venv, install dependencies/Chromium, and diagnose
   doctor   Read-only check of Python, Chromium, storage, driver, and queue
   printer  Select and save one validated local USB TSC MB341 queue
@@ -44,8 +47,7 @@ Commands:
 function Require-Environment {
     if (-not (Test-Path -LiteralPath $python)) {
         Write-Host "The local environment is missing." -ForegroundColor Red
-        Write-Host "Run: Set-ExecutionPolicy -Scope Process Bypass"
-        Write-Host "Then: .\warranty-windows.ps1 setup"
+        Write-Host "Run: .\warranty-windows.bat setup (or .\warranty-windows.ps1 setup)"
         exit 1
     }
 }
@@ -64,20 +66,22 @@ function Invoke-Menu {
         Write-Host "  1. Start CLI printer mode"
         Write-Host "  2. Start web mode"
         Write-Host "  3. Start safe virtual-output mode"
-        Write-Host "  4. Run diagnostics"
-        Write-Host "  5. Run printer setup"
-        Write-Host "  6. Run environment setup"
+        Write-Host "  4. Update application (git pull)"
+        Write-Host "  5. Run diagnostics"
+        Write-Host "  6. Run printer setup"
+        Write-Host "  7. Run environment setup"
         Write-Host "  0. Exit"
         $choice = Read-Host "Select an option"
         switch ($choice) {
             "1" { & $PSCommandPath cli; return }
             "2" { & $PSCommandPath web; return }
             "3" { & $PSCommandPath safe; return }
-            "4" { & $PSCommandPath doctor; Read-Host "Press Enter to continue" | Out-Null }
-            "5" { & $PSCommandPath printer; Read-Host "Press Enter to continue" | Out-Null }
-            "6" { & $PSCommandPath setup; Read-Host "Press Enter to continue" | Out-Null }
+            "4" { & $PSCommandPath update; Read-Host "Press Enter to continue" | Out-Null }
+            "5" { & $PSCommandPath doctor; Read-Host "Press Enter to continue" | Out-Null }
+            "6" { & $PSCommandPath printer; Read-Host "Press Enter to continue" | Out-Null }
+            "7" { & $PSCommandPath setup; Read-Host "Press Enter to continue" | Out-Null }
             "0" { return }
-            default { Write-Host "Choose a number from 0 to 6." -ForegroundColor Yellow }
+            default { Write-Host "Choose a number from 0 to 7." -ForegroundColor Yellow }
         }
     }
 }
@@ -88,6 +92,13 @@ switch ($Command) {
     }
     "help" {
         Show-Help
+    }
+    "update" {
+        Write-Host "Pulling latest updates from git..." -ForegroundColor Cyan
+        & git pull origin main
+        Assert-ExitCode "Git pull"
+        Write-Host "Application updated to latest git main." -ForegroundColor Green
+        exit 0
     }
     "setup" {
         $setupArgs = @()
