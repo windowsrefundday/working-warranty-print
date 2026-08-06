@@ -40,6 +40,16 @@ policy must replace this assumption before publication. Report security issues
 privately using the process in [SECURITY.md](SECURITY.md); do not open a public
 issue for an unpatched vulnerability.
 
+## One-Liner Windows Quick Installation
+
+To install Python, Git, the application, dependencies, and Windows shortcuts automatically on Windows 11 / 10, open PowerShell and paste:
+
+```powershell
+irm https://raw.githubusercontent.com/windowsrefundday/working-warranty-print/main/install.ps1 | iex
+```
+
+This installs missing prerequisites via `winget` (if needed), clones the codebase to `%USERPROFILE%\working-warranty-print`, configures the Python environment, adds Start Menu & Desktop shortcuts, and launches the operator menu!
+
 ## Quick start: use the web scanner
 
 If you only want to use the browser dashboard, you do not need a printer or

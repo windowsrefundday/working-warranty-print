@@ -59,6 +59,15 @@ class WindowsOperatorScriptTests(unittest.TestCase):
         self.assertIn("./setup-macos.sh --with-tunnel-runtime", readme)
         self.assertIn("Setup and diagnostics never print or calibrate.", readme)
 
+    def test_one_liner_installer_script(self) -> None:
+        installer = (ROOT / "install.ps1").read_text(encoding="utf-8")
+
+        self.assertIn("winget install", installer)
+        self.assertIn("Git.Git", installer)
+        self.assertIn("Python.Python.3.11", installer)
+        self.assertIn("setup-windows.ps1", installer)
+        self.assertIn("create_shortcut.ps1", installer)
+
 
 if __name__ == "__main__":
     unittest.main()
