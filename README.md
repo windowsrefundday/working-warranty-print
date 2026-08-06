@@ -50,6 +50,14 @@ irm https://raw.githubusercontent.com/windowsrefundday/working-warranty-print/ma
 
 This installs missing prerequisites via `winget` (if needed), clones the codebase to `%USERPROFILE%\working-warranty-print`, configures the Python environment, adds Start Menu & Desktop shortcuts, and launches the operator menu!
 
+## One-Liner Windows Uninstallation
+
+To completely remove the application, local data cache, and shortcuts (while leaving Python and Git installed), open PowerShell and paste:
+
+```powershell
+irm https://raw.githubusercontent.com/windowsrefundday/working-warranty-print/main/uninstall.ps1 | iex
+```
+
 ## Quick start: use the web scanner
 
 If you only want to use the browser dashboard, you do not need a printer or

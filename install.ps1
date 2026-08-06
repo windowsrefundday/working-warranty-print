@@ -92,7 +92,19 @@ Write-Host ""
 Write-Host "Running environment setup script..." -ForegroundColor Cyan
 & "$targetDir\setup-windows.ps1"
 
-# 4. Shortcut Creation
+# 4. Printer Queue & Driver Auto-Detection
+Write-Host ""
+Write-Host "Checking for connected TSC MB341 thermal printer queue..." -ForegroundColor Cyan
+$tscPrinter = Get-Printer | Where-Object { $_.Name -like "*MB341*" -or $_.DriverName -like "*TSC*" } -ErrorAction SilentlyContinue
+if ($tscPrinter) {
+    Write-Host "[Printer] Found online TSC printer queue: $($tscPrinter.Name)" -ForegroundColor Green
+} else {
+    Write-Host "[Printer] No local TSC MB341 USB queue detected." -ForegroundColor Yellow
+    Write-Host "           Physical printing requires the WHQL Windows driver:" -ForegroundColor Yellow
+    Write-Host "           https://usca.tscprinters.com/en/downloads" -ForegroundColor Yellow
+}
+
+# 5. Shortcut Creation
 Write-Host ""
 Write-Host "Creating Windows Start Menu and Desktop shortcuts..." -ForegroundColor Cyan
 if (Test-Path -LiteralPath "$targetDir\tools\create_shortcut.ps1") {

@@ -68,6 +68,14 @@ class WindowsOperatorScriptTests(unittest.TestCase):
         self.assertIn("setup-windows.ps1", installer)
         self.assertIn("create_shortcut.ps1", installer)
 
+    def test_one_liner_uninstaller_script(self) -> None:
+        uninstaller = (ROOT / "uninstall.ps1").read_text(encoding="utf-8")
+
+        self.assertIn("Removing Windows shortcuts...", uninstaller)
+        self.assertIn("Removing local runtime data", uninstaller)
+        self.assertIn("Removing application installation files...", uninstaller)
+        self.assertIn("Python and Git remain installed", uninstaller)
+
 
 if __name__ == "__main__":
     unittest.main()
