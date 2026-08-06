@@ -19,16 +19,17 @@ def configure_printer_binding(
     """Require an explicit operator choice; never select a queue silently."""
     candidates = connector.list_candidates()
     if not candidates:
-        output_fn("No validated local USB TSC MB341 queues were found.")
+        output_fn("No validated thermal label printer queues were found.")
         if sys.platform == "win32":
             output_fn(
-                "Install the official TSC Windows driver, connect the MB341 by "
-                "USB, and run this command again."
+                "Install the official WHQL printer driver (TSC MB341 recommended), "
+                "connect the printer by USB, and run this command again."
             )
         return None
-    output_fn("Validated TSC MB341 queues:")
+    output_fn("Detected thermal label printer queues:")
     for index, queue in enumerate(candidates, start=1):
-        output_fn(f"  {index}. {queue}")
+        tag = " (Recommended / Validated)" if "MB341" in queue.upper() or "TSC" in queue.upper() else " (Thermal Label Printer)"
+        output_fn(f"  {index}. {queue}{tag}")
     raw = input_fn("Select a queue number (or press Enter to cancel): ").strip()
     if not raw:
         output_fn("Printer setup cancelled; no binding was changed.")
@@ -45,5 +46,5 @@ def configure_printer_binding(
         binding = default_binding(selected)
     saved_path = save_binding(binding, binding_path)
     connector.set_binding(binding)
-    output_fn(f"Saved exact MB341 binding to {saved_path}")
+    output_fn(f"Saved exact printer binding to {saved_path}")
     return binding

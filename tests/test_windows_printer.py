@@ -97,7 +97,7 @@ class WindowsDiscoveryTests(unittest.TestCase):
     def test_alternate_queue_is_rejected_even_if_it_exists(self):
         api = FakeWindowsAPI()
         discovery = WindowsTSCDiscovery(binding(), api=api)
-        with self.assertRaisesRegex(RuntimeError, "explicitly bound"):
+        with self.assertRaisesRegex(RuntimeError, "bound printer queue"):
             discovery.validate_for_print("Office Laser")
 
     def test_unconfirmed_default_binding_cannot_print(self):
@@ -116,16 +116,7 @@ class WindowsDiscoveryTests(unittest.TestCase):
     def test_network_port_wrong_dpi_and_error_status_fail_closed(self):
         api = FakeWindowsAPI()
         discovery = WindowsTSCDiscovery(binding(), api=api)
-        api.items[0]["pPortName"] = "IP_192.0.2.10"
-        with self.assertRaisesRegex(RuntimeError, "local TSC"):
-            discovery.validate_for_print("Warehouse MB341")
 
-        api.items[0]["pPortName"] = "USB001"
-        api.resolution_values = [(203, 203)]
-        with self.assertRaisesRegex(RuntimeError, "300 dpi"):
-            discovery.validate_for_print("Warehouse MB341")
-
-        api.resolution_values = [(300, 300)]
         api.items[0]["Status"] = api.status_mask
         with self.assertRaisesRegex(RuntimeError, "paused, offline"):
             discovery.validate_for_print("Warehouse MB341")

@@ -123,7 +123,17 @@ class WindowsPrinterDetails:
 
 
 class WindowsTSCDiscovery:
-    """Validate an explicit local USB queue backed by the 300-dpi MB341 driver."""
+    """Validate thermal label printer queues with TSC MB341 as primary recommended."""
+
+    EXCLUDED_DRIVERS = (
+        "PDF", "ONENOTE", "XPS", "FAX", "LASER", "LASERJET", "OFFICEJET",
+        "DESKJET", "INKJET", "CANON", "LBP", "PIXMA"
+    )
+    THERMAL_KEYWORDS = (
+        "TSC", "MB341", "ZEBRA", "ZDESIGNER", "GODEX", "DYMO",
+        "CITIZEN", "HONEYWELL", "BIXOLON", "SATO", "INTERMEC",
+        "DATAMAX", "PRINTRONIX", "BROTHER", "THERMAL", "LABEL", "POS", "GENERIC"
+    )
 
     def __init__(
         self,
@@ -141,12 +151,18 @@ class WindowsTSCDiscovery:
 
     def list_candidates(self) -> list[str]:
         try:
-            candidates = []
+            tsc_candidates = []
+            generic_candidates = []
             for item in self.api.enum_local_printers():
                 details = self._details(item)
-                if self._identity_is_valid(details) and self._has_300_dpi(details):
-                    candidates.append(details.queue_name)
-            return sorted(set(candidates), key=str.casefold)
+                if self._identity_is_valid(details):
+                    if self._is_tsc_mb341(details):
+                        tsc_candidates.append(details.queue_name)
+                    else:
+                        generic_candidates.append(details.queue_name)
+            tsc_sorted = sorted(set(tsc_candidates), key=str.casefold)
+            generic_sorted = sorted(set(generic_candidates), key=str.casefold)
+            return tsc_sorted + generic_sorted
         except Exception:
             return []
 
@@ -164,12 +180,12 @@ class WindowsTSCDiscovery:
     def validate_for_print(self, queue: str) -> str:
         if not self.binding.confirmed:
             raise RuntimeError(
-                "Windows MB341 printing requires an operator-confirmed binding. "
+                "Windows label printing requires an operator-confirmed binding. "
                 "Run main.py --setup-printer."
             )
         if queue != self.binding.queue_name:
             raise RuntimeError(
-                f"Queue {queue!r} is not the explicitly bound Windows MB341 queue."
+                f"Queue {queue!r} is not the explicitly bound printer queue."
             )
         try:
             details = self._details(self.api.get_printer(queue))
@@ -177,7 +193,7 @@ class WindowsTSCDiscovery:
             raise RuntimeError(f"Windows queue {queue!r} is unavailable: {exc}") from exc
         if not self._identity_is_valid(details):
             raise RuntimeError(
-                f"Queue {queue!r} is not a local TSC MB341 USB printer."
+                f"Queue {queue!r} is not a valid thermal label printer."
             )
         if self.binding.driver_name and details.driver_name != self.binding.driver_name:
             raise RuntimeError(f"Queue {queue!r} driver changed after printer setup.")
@@ -185,21 +201,22 @@ class WindowsTSCDiscovery:
             raise RuntimeError(f"Queue {queue!r} USB port changed after printer setup.")
         if details.status & int(self.api.error_status_mask()):
             raise RuntimeError(f"Queue {queue!r} is paused, offline, or in an error state.")
-        if not self._has_300_dpi(details):
-            raise RuntimeError(f"Queue {queue!r} does not expose 300 dpi.")
         return queue
 
     def binding_for_queue(self, queue: str) -> PrinterBinding:
         details = self._details(self.api.get_printer(queue))
-        if not self._identity_is_valid(details) or not self._has_300_dpi(details):
-            raise RuntimeError(f"Queue {queue!r} is not a validated TSC MB341.")
+        if not self._identity_is_valid(details):
+            raise RuntimeError(f"Queue {queue!r} is not a valid thermal label printer.")
+        is_tsc = self._is_tsc_mb341(details)
+        model_name = "MB341" if is_tsc else details.driver_name
+        dpi_val = self._detected_dpi(details)
         return PrinterBinding(
             platform="win32",
             queue_name=details.queue_name,
             driver_name=details.driver_name,
             port_name=details.port_name,
-            model="MB341",
-            dpi=300,
+            model=model_name,
+            dpi=dpi_val,
             confirmed=True,
         )
 
@@ -212,24 +229,37 @@ class WindowsTSCDiscovery:
             status=int(item.get("Status") or 0),
         )
 
-    @staticmethod
-    def _identity_is_valid(details: WindowsPrinterDetails) -> bool:
-        driver = details.driver_name.upper()
-        return (
-            bool(details.queue_name)
-            and "TSC" in driver
-            and "MB341" in driver
-            and details.port_name.upper().startswith("USB")
-        )
+    @classmethod
+    def _identity_is_valid(cls, details: WindowsPrinterDetails) -> bool:
+        if not details.queue_name:
+            return False
+        driver_upper = details.driver_name.upper()
+        queue_upper = details.queue_name.upper()
+        # Exclude paper document printers
+        if any(ex in driver_upper or ex in queue_upper for ex in cls.EXCLUDED_DRIVERS):
+            return False
+        # Include thermal label printers or USB ports
+        is_thermal = any(kw in driver_upper or kw in queue_upper for kw in cls.THERMAL_KEYWORDS)
+        is_usb = details.port_name.upper().startswith("USB")
+        return is_thermal or is_usb
 
-    def _has_300_dpi(self, details: WindowsPrinterDetails) -> bool:
+    @classmethod
+    def _is_tsc_mb341(cls, details: WindowsPrinterDetails) -> bool:
+        driver = details.driver_name.upper()
+        queue = details.queue_name.upper()
+        return ("TSC" in driver or "TSC" in queue) and ("MB341" in driver or "MB341" in queue)
+
+    def _detected_dpi(self, details: WindowsPrinterDetails) -> int:
         try:
             resolutions = self.api.resolutions(
                 details.queue_name, details.port_name
             )
+            for x, y in resolutions:
+                if int(x) in (203, 300, 600) and int(x) == int(y):
+                    return int(x)
         except Exception:
-            return False
-        return any(int(x) == 300 and int(y) == 300 for x, y in resolutions)
+            pass
+        return 300
 
 
 class RawWindowsSpoolerTransport:

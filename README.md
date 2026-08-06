@@ -2,12 +2,26 @@
 
 A source-only warranty lookup and label-printing tool for IT departments. Scan
 an HP or Lenovo serial number, verify warranty information against the vendor,
-and create a 3 × 1 inch TSC MB341 label. The same application runs on Windows
-and macOS; Windows 11 x64 is the primary supported deployment.
+and create a 3 × 1 inch label. The same application runs on Windows and macOS;
+Windows 11 x64 is the primary supported deployment.
 
-There is no installer, packaged executable, or automatic driver download.
-Everything runs from the downloaded GitHub folder in an isolated Python
-environment.
+## One-Liner Windows Quick Installation
+
+To install Python, Git, the application, dependencies, and Windows shortcuts automatically on Windows 11 / 10, open PowerShell and paste:
+
+```powershell
+irm https://raw.githubusercontent.com/windowsrefundday/working-warranty-print/main/install.ps1 | iex
+```
+
+This installs missing prerequisites via `winget` (if needed), clones the codebase to `%USERPROFILE%\working-warranty-print`, configures the Python environment, adds Start Menu & Desktop shortcuts, and launches the operator menu!
+
+## One-Liner Windows Uninstallation
+
+To completely remove the application, local data cache, and shortcuts (while leaving Python and Git installed), open PowerShell and paste:
+
+```powershell
+irm https://raw.githubusercontent.com/windowsrefundday/working-warranty-print/main/uninstall.ps1 | iex
+```
 
 ## Public-release safety
 
@@ -39,24 +53,6 @@ If an agency, employer, or contractor owns the code, its legal and release
 policy must replace this assumption before publication. Report security issues
 privately using the process in [SECURITY.md](SECURITY.md); do not open a public
 issue for an unpatched vulnerability.
-
-## One-Liner Windows Quick Installation
-
-To install Python, Git, the application, dependencies, and Windows shortcuts automatically on Windows 11 / 10, open PowerShell and paste:
-
-```powershell
-irm https://raw.githubusercontent.com/windowsrefundday/working-warranty-print/main/install.ps1 | iex
-```
-
-This installs missing prerequisites via `winget` (if needed), clones the codebase to `%USERPROFILE%\working-warranty-print`, configures the Python environment, adds Start Menu & Desktop shortcuts, and launches the operator menu!
-
-## One-Liner Windows Uninstallation
-
-To completely remove the application, local data cache, and shortcuts (while leaving Python and Git installed), open PowerShell and paste:
-
-```powershell
-irm https://raw.githubusercontent.com/windowsrefundday/working-warranty-print/main/uninstall.ps1 | iex
-```
 
 ## Quick start: use the web scanner
 
