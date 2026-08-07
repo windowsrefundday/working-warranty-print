@@ -5,23 +5,64 @@ an HP or Lenovo serial number, verify warranty information against the vendor,
 and create a 3 × 1 inch label. The same application runs on Windows and macOS;
 Windows 11 x64 is the primary supported deployment.
 
-## One-Liner Windows Quick Installation
+## Quick Start (First-Time Windows Setup)
 
-To install Python, Git, the application, dependencies, and Windows shortcuts automatically on Windows 11 / 10, open PowerShell and paste:
+Follow these steps to install and run the application on a Windows 10 / 11 computer:
+
+### Step 1: Open the Web Page
+Open this repository page (`github.com/windowsrefundday/working-warranty-print`) on the Windows computer where you want to install the software.
+
+### Step 2: Open PowerShell
+1. Click the **Start Menu** (or press `Win + R`).
+2. Search for **PowerShell** (make sure the title bar or terminal prompt says **PowerShell**, not Command Prompt).
+
+### Step 3: Copy and Paste the Installation Command
+Copy the following command from the web page and paste it into your PowerShell window, then press **Enter**:
 
 ```powershell
 irm https://raw.githubusercontent.com/windowsrefundday/working-warranty-print/main/install.ps1 | iex
 ```
 
-This installs missing prerequisites via `winget` (if needed), clones the codebase to `%USERPROFILE%\working-warranty-print`, configures the Python environment, adds Start Menu & Desktop shortcuts, and launches the operator menu!
+> **Note:** No Administrator rights are required. This script uses `winget` (if installed) to fetch Git and Python 3.11, clones the repo to `%USERPROFILE%\working-warranty-print`, creates Start Menu and Desktop shortcuts, and launches the operator menu.
+
+### Step 4: Navigate the Operator CLI Menu
+Once installation completes, the interactive operator menu will automatically launch in PowerShell:
+
+```text
+============================================================
+  WARRANTY LABEL PRINTER - WINDOWS OPERATOR MENU
+============================================================
+  1. Start CLI printer mode
+  2. Start CLI safe mode (virtual text files, no printing)
+  3. Start web mode with secure Tunnel
+  4. Run printer diagnostic check
+  5. Update application (git pull)
+  6. Run environment setup
+  7. Run printer setup
+  8. Run label calibration test
+  9. Create Windows shortcuts
+  0. Exit
+============================================================
+```
+
+#### Common Actions:
+- **`1` (CLI Printer Mode)**: Launches barcode scanning mode connected to your thermal printer. Simply scan or type a serial number and press **Enter**.
+- **`2` (Safe Mode)**: Test lookups without a physical printer attached (outputs virtual text files).
+- **`3` (Web Mode)**: Starts local web server dashboard with secure remote camera scanning tunnel.
+- **`7` (Printer Setup)**: Choose or change which connected USB thermal printer to bind.
+- **`q` or `0`**: Exit the menu or CLI scanner.
+
+---
 
 ## One-Liner Windows Uninstallation
 
-To completely remove the application, local data cache, and shortcuts (while leaving Python and Git installed), open PowerShell and paste:
+To completely remove the application, local data cache, and shortcuts (while leaving Python and Git installed on the computer), open PowerShell and paste:
 
 ```powershell
 irm https://raw.githubusercontent.com/windowsrefundday/working-warranty-print/main/uninstall.ps1 | iex
 ```
+
+---
 
 ## Public-release safety
 
