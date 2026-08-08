@@ -1,0 +1,158 @@
+name: Managed application release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions: {}
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            target: macos-arm64
+            requirements: requirements.txt
+            runtime_url: https://github.com/astral-sh/python-build-standalone/releases/download/20260807/cpython-3.12.13%2B20260807-aarch64-apple-darwin-install_only.tar.gz
+            runtime_sha256: 4201588fc5051c2ba988abbe1f033d318965ee378fadf7fb7ef79882ba7be84b
+            runtime_python: build/runtime/bin/python3
+          - os: windows-2022
+            target: windows-x86_64
+            requirements: requirements-windows.txt
+            runtime_url: https://github.com/astral-sh/python-build-standalone/releases/download/20260807/cpython-3.12.13%2B20260807-x86_64-pc-windows-msvc-install_only.tar.gz
+            runtime_sha256: 6cf2be701aa7e9470454c9c86285c1bcc1832518d63e39c3e34e9d8ea1cbb99f
+            runtime_python: build/runtime/python.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          package-manager-cache: false
+      - name: Install verified standalone Python runtime
+        shell: bash
+        env:
+          RUNTIME_SHA256: ${{ matrix.runtime_sha256 }}
+          RUNTIME_URL: ${{ matrix.runtime_url }}
+        run: |
+          mkdir -p build/runtime
+          curl --proto '=https' --tlsv1.2 --fail --location "$RUNTIME_URL" --output build/python-runtime.tar.gz
+          python - <<'PY'
+          import hashlib
+          import os
+          from pathlib import Path
+
+          archive = Path("build/python-runtime.tar.gz")
+          actual = hashlib.sha256(archive.read_bytes()).hexdigest()
+          expected = os.environ["RUNTIME_SHA256"]
+          if actual != expected:
+              raise SystemExit(f"Standalone Python checksum mismatch: {actual}")
+          PY
+          tar -xzf build/python-runtime.tar.gz -C build/runtime --strip-components=1
+          "${{ matrix.runtime_python }}" -I -c "import sys; print(sys.version)"
+      - name: Install locked application dependencies
+        shell: bash
+        run: |
+          "${{ matrix.runtime_python }}" -m pip install --upgrade pip
+          "${{ matrix.runtime_python }}" -m pip install -r "${{ matrix.requirements }}"
+          npm ci --omit=dev --ignore-scripts
+      - name: Install bundled Chromium
+        shell: bash
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/build/browsers
+        run: |
+          "${{ matrix.runtime_python }}" -m playwright install chromium
+      - name: Build managed release artifact
+        shell: bash
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION="${VERSION#v}"
+          mkdir -p dist
+          "${{ matrix.runtime_python }}" tools/package_release.py \
+            --version "$VERSION" \
+            --target "${{ matrix.target }}" \
+            --runtime build/runtime \
+            --browsers build/browsers \
+            --node-modules node_modules \
+            --output "dist/warranty-label-printer-${{ matrix.target }}.zip"
+      - name: Upload build artifact for publication
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: managed-${{ matrix.target }}
+          path: dist/warranty-label-printer-${{ matrix.target }}.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Verify tag commit is reviewed on main
+        shell: bash
+        run: |
+          git fetch --no-tags origin main
+          tag_commit=$(git rev-parse "$GITHUB_SHA^{commit}")
+          git merge-base --is-ancestor "$tag_commit" origin/main || {
+            echo "Release tag must point to a commit reachable from protected main" >&2
+            exit 1
+          }
+      - name: Install hash-locked signing dependencies
+        run: python -m pip install --require-hashes --requirement requirements-release.txt
+      - name: Download platform artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: managed-*
+          path: dist
+          merge-multiple: true
+      - name: Create draft release with immutable artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.zip --draft --title "Warranty Label Printer $GITHUB_REF_NAME" --generate-notes
+      - name: Sign update metadata
+        env:
+          UPDATE_SIGNING_KEY_B64: ${{ secrets.UPDATE_SIGNING_KEY_B64 }}
+          VERSION: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          test -n "$UPDATE_SIGNING_KEY_B64" || { echo "UPDATE_SIGNING_KEY_B64 is not configured" >&2; exit 1; }
+          VERSION="${VERSION#v}"
+          python tools/sign_manifest.py \
+            --version "$VERSION" \
+            --key-id release-2026-01 \
+            --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}" \
+            --asset windows-x86_64=dist/warranty-label-printer-windows-x86_64.zip \
+            --asset macos-arm64=dist/warranty-label-printer-macos-arm64.zip \
+            --output dist/update-manifest.json
+      - name: Verify signed metadata and artifacts
+        run: |
+          python tools/verify_release.py \
+            --manifest dist/update-manifest.json \
+            --asset windows-x86_64=dist/warranty-label-printer-windows-x86_64.zip \
+            --asset macos-arm64=dist/warranty-label-printer-macos-arm64.zip
+      - name: Publish verified update metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" dist/update-manifest.json --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false

@@ -1,10 +1,12 @@
 import json
 import re
+import urllib.parse
 import urllib.request
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from core.models import AssetRecord, Entitlement, SourceConfidence, VendorType
+from core.vendors.http import open_allowed_https
 
 
 class LenovoProductResolver:
@@ -26,10 +28,11 @@ class LenovoProductResolver:
             (product_id, product_name, error_message)
         """
         clean_sn = serial_number.strip().upper()
-        if not clean_sn:
-            return None, None, "Serial number cannot be empty"
+        if not re.fullmatch(r"[A-Z0-9-]{1,64}", clean_sn):
+            return None, None, "Serial number has invalid characters"
 
-        url = cls.ENDPOINT_URL.format(serial=clean_sn)
+        query = urllib.parse.urlencode({"productId": clean_sn})
+        url = f"https://pcsupport.lenovo.com/us/en/api/v4/mse/getproducts?{query}"
         req = urllib.request.Request(
             url,
             headers={
@@ -42,7 +45,11 @@ class LenovoProductResolver:
             },
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with open_allowed_https(
+                req,
+                allowed_host="pcsupport.lenovo.com",
+                timeout=timeout,
+            ) as resp:
                 if resp.status != 200:
                     return (
                         None,
@@ -95,7 +102,17 @@ class LenovoProductResolver:
         """
         if not product_id:
             return None, "Lenovo warranty lookup received an empty product ID"
-        url = cls.WARRANTY_URL.format(product_id=product_id)
+        segments = product_id.split("/")
+        if any(
+            not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", segment)
+            or segment in {".", ".."}
+            for segment in segments
+        ):
+            return None, "Lenovo product ID contains invalid path components"
+        encoded_product_id = "/".join(
+            urllib.parse.quote(segment, safe="") for segment in segments
+        )
+        url = cls.WARRANTY_URL.format(product_id=encoded_product_id)
         request = urllib.request.Request(
             url,
             headers={
@@ -108,7 +125,11 @@ class LenovoProductResolver:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
+            with open_allowed_https(
+                request,
+                allowed_host="pcsupport.lenovo.com",
+                timeout=timeout,
+            ) as response:
                 if response.status != 200:
                     return None, f"Lenovo warranty endpoint returned HTTP {response.status}"
                 return response.read().decode("utf-8"), None
