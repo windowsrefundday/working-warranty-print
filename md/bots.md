@@ -30,13 +30,6 @@ CodeRabbit and Greptile are repository integrations. Their GitHub App access
 must include this repository; workflow files alone cannot install or authorize
 either bot.
 
-The tag-driven release workflow builds platform-specific managed artifacts,
-including a copied Python runtime, and signs the update manifest with the
-protected release key. It must keep release publication separate from ordinary
-read-only verification, require approval through the protected `release`
-environment, and may not publish metadata until packaging, signature, artifact,
-and installation checks pass.
-
 Do not add secrets, broad write permissions, mutable action tags, or silent
 remote code installation to a workflow. Update `tools/release_audit.py` tests
 when introducing a new workflow reference pattern.

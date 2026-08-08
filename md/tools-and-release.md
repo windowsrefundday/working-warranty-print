@@ -7,35 +7,19 @@ runtime data, environment files, local paths, secret-like values,
 non-synthetic warranty identifiers, unapproved binary files, and workflow
 actions that are not pinned to immutable revisions.
 
-## Application release contract
+## Source-checkout updater
 
-Managed artifacts are ZIP files containing `release.json`, `app/`, a copied
-Python runtime, and (when available) a bundled browser runtime. Build them with
-`tools/package_release.py` and produce signed `update-manifest.json` metadata
-with `tools/sign_manifest.py`. The manifest uses Ed25519 signatures, explicit
-platform targets, bounded artifact sizes, SHA-256 digests, expiry timestamps,
-and a minimum launcher version.
+The application uses a deliberately small source-checkout updater. At startup,
+and then every six hours while the application is running, it fetches
+`origin/main` and applies only a fast-forward update. It refuses failed fetches,
+diverged history, and failed merges; it never resets local work or performs a
+merge. Set `WARRANTY_LABEL_DISABLE_AUTO_UPDATE=1` to skip the startup and
+background updater.
 
-The workflow downloads a versioned python-build-standalone archive for each
-platform, verifies its pinned SHA-256 digest before extraction, and packages
-that relocatable runtime. `tools/verify_release.py` re-verifies the signed
-manifest and every local artifact before the draft release is published.
-
-The signing private key must remain outside the repository and be injected only
-through the protected `release` GitHub Environment after reviewer approval.
-The public key is pinned in
-`tools/updater.py`; rotate it by overlapping old and new keys in a launcher
-release. Before enabling the tag workflow, configure the
-environment secret `UPDATE_SIGNING_KEY_B64` with the URL-safe Base64 encoding of exactly 32
-raw Ed25519 private-key bytes (Base64 padding is optional) corresponding to the
-pinned public key; the signer refuses a mismatched key. Publish artifacts first
-and promote the signed manifest only after clean Windows and macOS packaging,
-signature verification, and installation checks pass.
-
-The source-checkout launcher retains its existing git-pull update behavior.
-Managed ZIP artifacts and their signed manifest are a separate release channel;
-do not silently switch an installation between these channels or mutate a
-managed artifact's bundled `.venv` in place.
+This updater changes the checkout for the next process start. It does not
+install dependencies, run migrations, restart the current process, or replace
+the source checkout with a staged release. Those operations remain explicit
+operator/deployment responsibilities.
 
 ## History and visibility
 

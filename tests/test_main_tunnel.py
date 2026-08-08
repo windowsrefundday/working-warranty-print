@@ -142,6 +142,24 @@ class HttpsTunnelTests(unittest.TestCase):
 
         self.assertEqual(len(run.call_args_list), 4)
 
+    def test_git_updater_is_noop_after_fast_forward(self):
+        completed = lambda args, code=0, output="": subprocess.CompletedProcess(
+            args, code, stdout=output, stderr=""
+        )
+        with mock.patch(
+            "main.subprocess.run",
+            side_effect=[
+                completed(["fetch"]),
+                completed(["head"], output="same\n"),
+                completed(["remote"], output="same\n"),
+            ],
+        ) as run:
+            self.assertFalse(run_git_pull())
+
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual(commands[0][1:], ["fetch", "--no-tags", "origin", "main"])
+        self.assertEqual(len(commands), 3)
+
 
 if __name__ == "__main__":
     unittest.main()
