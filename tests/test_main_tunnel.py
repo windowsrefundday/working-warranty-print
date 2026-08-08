@@ -10,6 +10,10 @@ from main import (
 )
 
 
+def completed_process(args, code=0, output=""):
+    return subprocess.CompletedProcess(args, code, stdout=output, stderr="")
+
+
 class HttpsTunnelTests(unittest.TestCase):
     def setUp(self):
         self.node = mock.patch("main.shutil.which", return_value="/runtime/node")
@@ -105,58 +109,54 @@ class HttpsTunnelTests(unittest.TestCase):
         self.assertTrue(is_valid_https_url("https://scanner.example.test"))
 
     def test_git_updater_uses_fast_forward_only(self):
-        completed = lambda args, code=0, output="": subprocess.CompletedProcess(
-            args, code, stdout=output, stderr=""
-        )
         with mock.patch(
+            "main.shutil.which", return_value="/runtime/git"
+        ), mock.patch(
             "main.subprocess.run",
             side_effect=[
-                completed(["fetch"]),
-                completed(["head"], output="old\n"),
-                completed(["remote"], output="new\n"),
-                completed(["ancestor"]),
-                completed(["merge"], output="Updating old..new\n"),
+                completed_process(["fetch"]),
+                completed_process(["head"], output="old\n"),
+                completed_process(["remote"], output="new\n"),
+                completed_process(["ancestor"]),
+                completed_process(["merge"], output="Updating old..new\n"),
             ],
         ) as run:
             self.assertTrue(run_git_pull())
 
         commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual(commands[0][0], "/runtime/git")
         self.assertEqual(commands[0][1:], ["fetch", "--no-tags", "origin", "main"])
         self.assertEqual(commands[-1][1:], ["merge", "--ff-only", "origin/main"])
         self.assertNotIn("pull", [part for command in commands for part in command])
 
     def test_git_updater_refuses_diverged_history(self):
-        completed = lambda args, code=0, output="": subprocess.CompletedProcess(
-            args, code, stdout=output, stderr=""
-        )
-        with mock.patch(
+        with mock.patch("main.shutil.which", return_value="/runtime/git"), mock.patch(
             "main.subprocess.run",
             side_effect=[
-                completed(["fetch"]),
-                completed(["head"], output="local\n"),
-                completed(["remote"], output="remote\n"),
-                completed(["ancestor"], code=1),
+                completed_process(["fetch"]),
+                completed_process(["head"], output="local\n"),
+                completed_process(["remote"], output="remote\n"),
+                completed_process(["ancestor"], code=1),
             ],
         ) as run:
             self.assertFalse(run_git_pull())
 
+        self.assertEqual(run.call_args_list[0].args[0][0], "/runtime/git")
         self.assertEqual(len(run.call_args_list), 4)
 
     def test_git_updater_is_noop_after_fast_forward(self):
-        completed = lambda args, code=0, output="": subprocess.CompletedProcess(
-            args, code, stdout=output, stderr=""
-        )
-        with mock.patch(
+        with mock.patch("main.shutil.which", return_value="/runtime/git"), mock.patch(
             "main.subprocess.run",
             side_effect=[
-                completed(["fetch"]),
-                completed(["head"], output="same\n"),
-                completed(["remote"], output="same\n"),
+                completed_process(["fetch"]),
+                completed_process(["head"], output="same\n"),
+                completed_process(["remote"], output="same\n"),
             ],
         ) as run:
             self.assertFalse(run_git_pull())
 
         commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual(commands[0][0], "/runtime/git")
         self.assertEqual(commands[0][1:], ["fetch", "--no-tags", "origin", "main"])
         self.assertEqual(len(commands), 3)
 

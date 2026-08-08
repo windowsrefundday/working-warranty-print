@@ -12,9 +12,10 @@ actions that are not pinned to immutable revisions.
 The application uses a deliberately small source-checkout updater. At startup,
 and then every six hours while the application is running, it fetches
 `origin/main` and applies only a fast-forward update. It refuses failed fetches,
-diverged history, and failed merges; it never resets local work or performs a
-merge. Set `WARRANTY_LABEL_DISABLE_AUTO_UPDATE=1` to skip the startup and
-background updater.
+diverged history, and failed merges; it never resets local work, performs a
+non-fast-forward merge, or creates a merge commit. Set
+`WARRANTY_LABEL_DISABLE_AUTO_UPDATE=1` to skip the startup and background
+updater.
 
 This updater changes the checkout for the next process start. It does not
 install dependencies, run migrations, restart the current process, or replace
