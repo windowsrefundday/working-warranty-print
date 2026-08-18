@@ -171,7 +171,7 @@ class LenovoParserTests(unittest.TestCase):
 
 class LenovoProductResolverTests(unittest.TestCase):
 
-    @patch("urllib.request.urlopen")
+    @patch("core.vendors.http.urllib.request.build_opener")
     def test_exact_serial_result_is_accepted(self, mock_urlopen):
         resp_json = json.dumps([
             {
@@ -184,14 +184,17 @@ class LenovoProductResolverTests(unittest.TestCase):
         mock_resp = MagicMock()
         mock_resp.status = 200
         mock_resp.read.return_value = resp_json
-        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        mock_resp.geturl.return_value = LenovoProductResolver.ENDPOINT_URL.format(
+            serial="MZTEST001"
+        )
+        mock_urlopen.return_value.open.return_value.__enter__.return_value = mock_resp
 
         pid, name, err = LenovoProductResolver.resolve_product("mztest001")
         self.assertIsNone(err)
         self.assertEqual(pid, "DESKTOPS-AND-ALL-IN-ONES/TEST-SERIES/TEST-MODEL/TEST-MT-001/TEST-MT-001TEST-MODEL-001/MZTEST001")
         self.assertEqual(name, "LENOVO TEST MODEL 001")
 
-    @patch("urllib.request.urlopen")
+    @patch("core.vendors.http.urllib.request.build_opener")
     def test_case_differences_normalize_correctly(self, mock_urlopen):
         resp_json = json.dumps([
             {
@@ -203,34 +206,43 @@ class LenovoProductResolverTests(unittest.TestCase):
         mock_resp = MagicMock()
         mock_resp.status = 200
         mock_resp.read.return_value = resp_json
-        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        mock_resp.geturl.return_value = LenovoProductResolver.ENDPOINT_URL.format(
+            serial="MZTEST001"
+        )
+        mock_urlopen.return_value.open.return_value.__enter__.return_value = mock_resp
 
         pid, _name, err = LenovoProductResolver.resolve_product("mztest001")
         self.assertIsNone(err)
         self.assertEqual(pid, "PROD/123/mztest001")
 
-    @patch("urllib.request.urlopen")
+    @patch("core.vendors.http.urllib.request.build_opener")
     def test_empty_response_is_rejected(self, mock_urlopen):
         mock_resp = MagicMock()
         mock_resp.status = 200
         mock_resp.read.return_value = b"[]"
-        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        mock_resp.geturl.return_value = LenovoProductResolver.ENDPOINT_URL.format(
+            serial="MZTEST001"
+        )
+        mock_urlopen.return_value.open.return_value.__enter__.return_value = mock_resp
 
         pid, _name, err = LenovoProductResolver.resolve_product("MZTEST001")
         self.assertIsNotNone(err)
         self.assertIsNone(pid)
 
-    @patch("urllib.request.urlopen")
+    @patch("core.vendors.http.urllib.request.build_opener")
     def test_invalid_json_is_rejected(self, mock_urlopen):
         mock_resp = MagicMock()
         mock_resp.status = 200
         mock_resp.read.return_value = b"NOT_JSON"
-        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        mock_resp.geturl.return_value = LenovoProductResolver.ENDPOINT_URL.format(
+            serial="MZTEST001"
+        )
+        mock_urlopen.return_value.open.return_value.__enter__.return_value = mock_resp
 
         _pid, _name, err = LenovoProductResolver.resolve_product("MZTEST001")
         self.assertIsNotNone(err)
 
-    @patch("urllib.request.urlopen")
+    @patch("core.vendors.http.urllib.request.build_opener")
     def test_wrong_serial_response_is_rejected(self, mock_urlopen):
         resp_json = json.dumps([
             {
@@ -242,12 +254,15 @@ class LenovoProductResolverTests(unittest.TestCase):
         mock_resp = MagicMock()
         mock_resp.status = 200
         mock_resp.read.return_value = resp_json
-        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        mock_resp.geturl.return_value = LenovoProductResolver.ENDPOINT_URL.format(
+            serial="MZTEST001"
+        )
+        mock_urlopen.return_value.open.return_value.__enter__.return_value = mock_resp
 
         _pid, _name, err = LenovoProductResolver.resolve_product("MZTEST001")
         self.assertIsNotNone(err)
 
-    @patch("urllib.request.urlopen")
+    @patch("core.vendors.http.urllib.request.build_opener")
     def test_missing_id_is_rejected(self, mock_urlopen):
         resp_json = json.dumps([
             {
@@ -259,26 +274,40 @@ class LenovoProductResolverTests(unittest.TestCase):
         mock_resp = MagicMock()
         mock_resp.status = 200
         mock_resp.read.return_value = resp_json
-        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        mock_resp.geturl.return_value = LenovoProductResolver.ENDPOINT_URL.format(
+            serial="MZTEST001"
+        )
+        mock_urlopen.return_value.open.return_value.__enter__.return_value = mock_resp
 
         _pid, _name, err = LenovoProductResolver.resolve_product("MZTEST001")
         self.assertIsNotNone(err)
 
-    @patch("urllib.request.urlopen")
+    @patch("core.vendors.http.urllib.request.build_opener")
     def test_missing_official_product_name_is_rejected(self, mock_urlopen):
         mock_resp = MagicMock()
         mock_resp.status = 200
         mock_resp.read.return_value = json.dumps([{"Id": "PROD/123/MZTEST001", "Serial": "MZTEST001"}]).encode("utf-8")
-        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        mock_resp.geturl.return_value = LenovoProductResolver.ENDPOINT_URL.format(
+            serial="MZTEST001"
+        )
+        mock_urlopen.return_value.open.return_value.__enter__.return_value = mock_resp
 
         pid, name, err = LenovoProductResolver.resolve_product("MZTEST001")
         self.assertIsNone(pid)
         self.assertIsNone(name)
         self.assertIn("product name", err or "")
 
-    @patch("urllib.request.urlopen")
+    @patch("core.vendors.http.urllib.request.build_opener")
+    def test_invalid_serial_is_rejected_before_request(self, mock_urlopen):
+        pid, name, err = LenovoProductResolver.resolve_product("../MZTEST001")
+        self.assertIsNone(pid)
+        self.assertIsNone(name)
+        self.assertIn("invalid characters", err or "")
+        mock_urlopen.assert_not_called()
+
+    @patch("core.vendors.http.urllib.request.build_opener")
     def test_http_network_failure_returns_explicit_failure(self, mock_urlopen):
-        mock_urlopen.side_effect = urllib.error.URLError("Connection refused")
+        mock_urlopen.return_value.open.side_effect = urllib.error.URLError("Connection refused")
         _pid, _name, err = LenovoProductResolver.resolve_product("MZTEST001")
         self.assertIsNotNone(err)
         self.assertIn("URLError", err or "")

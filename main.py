@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 import urllib.parse
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -132,24 +133,59 @@ GIT_PULL_INTERVAL_SECONDS = 6 * 60 * 60
 
 
 def run_git_pull() -> bool:
-    """Attempt a git pull from origin main; fail gracefully if offline or clean."""
+    """Fast-forward to verified `origin/main`; fail closed if history diverges."""
     git_bin = shutil.which("git")
     if not git_bin:
         return False
     repo_root = os.path.dirname(os.path.abspath(__file__))
     try:
-        result = subprocess.run(
-            [git_bin, "pull", "origin", "main"],
+        fetch = subprocess.run(
+            [git_bin, "fetch", "--no-tags", "origin", "main"],
             cwd=repo_root,
             capture_output=True,
             text=True,
             timeout=30,
         )
-        if result.returncode == 0:
-            if "Already up to date." not in result.stdout:
-                print(f"[GIT UPDATE] {result.stdout.strip()}")
-                return True
-        return False
+        if fetch.returncode != 0:
+            return False
+        head = subprocess.run(
+            [git_bin, "rev-parse", "HEAD"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        remote = subprocess.run(
+            [git_bin, "rev-parse", "origin/main"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if head.returncode != 0 or remote.returncode != 0:
+            return False
+        if head.stdout.strip() == remote.stdout.strip():
+            return False
+        ancestor = subprocess.run(
+            [git_bin, "merge-base", "--is-ancestor", "HEAD", "origin/main"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if ancestor.returncode != 0:
+            return False
+        update = subprocess.run(
+            [git_bin, "merge", "--ff-only", "origin/main"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if update.returncode != 0:
+            return False
+        print(f"[GIT UPDATE] {update.stdout.strip()}")
+        return True
     except (OSError, subprocess.TimeoutExpired):
         return False
 
@@ -209,8 +245,7 @@ def main():
 
     if not os.environ.get("WARRANTY_LABEL_DISABLE_AUTO_UPDATE"):
         run_git_pull()
-
-    stop_update_event, _ = start_background_git_updater()
+        start_background_git_updater()
 
     if args.setup_printer:
         engine = WarrantyEngine()

@@ -7,6 +7,21 @@ runtime data, environment files, local paths, secret-like values,
 non-synthetic warranty identifiers, unapproved binary files, and workflow
 actions that are not pinned to immutable revisions.
 
+## Source-checkout updater
+
+The application uses a deliberately small source-checkout updater. At startup,
+and then every six hours while the application is running, it fetches
+`origin/main` and applies only a fast-forward update. It refuses failed fetches,
+diverged history, and failed merges; it never resets local work, performs a
+non-fast-forward merge, or creates a merge commit. Set
+`WARRANTY_LABEL_DISABLE_AUTO_UPDATE=1` to skip the startup and background
+updater.
+
+This updater changes the checkout for the next process start. It does not
+install dependencies, run migrations, restart the current process, or replace
+the source checkout with a staged release. Those operations remain explicit
+operator/deployment responsibilities.
+
 ## History and visibility
 
 The working tree audit is not a history scrub. Before publishing a repository
