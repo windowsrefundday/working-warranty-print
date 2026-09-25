@@ -11,12 +11,10 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from core.engine import WarrantyEngine
-from interfaces.cli import run_cli_mode
-from interfaces.web import run_web_mode
-from core.diagnostics import build_diagnostic_report, print_diagnostic_report
-from core.printers.setup_service import configure_printer_binding
-from core.printers.tsc_connector import TSCPrinterConnector
+# Only the standard library and the updater load before the update runs.
+# Application modules are imported inside main() so a broken application
+# commit cannot stop the updater from fetching a fix or rolling back.
+from updater import DISABLE_ENV, Updater, start_background_updater
 
 LOCAL_TUNNEL_ENTRYPOINT = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -129,86 +127,6 @@ def launch_https_tunnel(port: int, timeout_seconds: float = 20.0):
             stop_tunnel_process(tunnel_process)
 
 
-GIT_PULL_INTERVAL_SECONDS = 6 * 60 * 60
-
-
-def run_git_pull() -> bool:
-    """Fast-forward to verified `origin/main`; fail closed if history diverges."""
-    git_bin = shutil.which("git")
-    if not git_bin:
-        return False
-    repo_root = os.path.dirname(os.path.abspath(__file__))
-    try:
-        fetch = subprocess.run(
-            [git_bin, "fetch", "--no-tags", "origin", "main"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if fetch.returncode != 0:
-            return False
-        head = subprocess.run(
-            [git_bin, "rev-parse", "HEAD"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        remote = subprocess.run(
-            [git_bin, "rev-parse", "origin/main"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        if head.returncode != 0 or remote.returncode != 0:
-            return False
-        if head.stdout.strip() == remote.stdout.strip():
-            return False
-        ancestor = subprocess.run(
-            [git_bin, "merge-base", "--is-ancestor", "HEAD", "origin/main"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        if ancestor.returncode != 0:
-            return False
-        update = subprocess.run(
-            [git_bin, "merge", "--ff-only", "origin/main"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if update.returncode != 0:
-            return False
-        print(f"[GIT UPDATE] {update.stdout.strip()}")
-        return True
-    except (OSError, subprocess.TimeoutExpired):
-        return False
-
-
-def _background_git_pull_loop(stop_event: threading.Event) -> None:
-    """Schedule git pull every 6 hours while the app is running."""
-    while not stop_event.wait(GIT_PULL_INTERVAL_SECONDS):
-        run_git_pull()
-
-
-def start_background_git_updater() -> tuple[threading.Event, threading.Thread]:
-    """Start daemon thread for periodic 6-hour git pull updates."""
-    stop_event = threading.Event()
-    thread = threading.Thread(
-        target=_background_git_pull_loop,
-        args=(stop_event,),
-        name="git-auto-updater",
-        daemon=True,
-    )
-    thread.start()
-    return stop_event, thread
-
-
 def main():
     parser = argparse.ArgumentParser(description="Universal Warranty Lookup & Label Printer Application")
     parser.add_argument("--mode", choices=["cli", "web"], default="cli", help="Interface mode to run (cli or web). Default: cli")
@@ -232,20 +150,40 @@ def main():
         action="store_true",
         help="Select and save one explicitly validated USB TSC MB341 queue.",
     )
+    parser.add_argument(
+        "--self-test",
+        action="store_true",
+        help="Import every application module and exit; used by the updater.",
+    )
 
 
     args = parser.parse_args()
 
+    if not (args.diagnose or args.self_test):
+        print("Created by Joel Manuel for the VA 2026")
+        print("Thanks to Steve, Anthony, Chris, and Ernes")
+        updater = Updater(os.path.dirname(os.path.abspath(__file__)))
+        if not os.environ.get(DISABLE_ENV):
+            result = updater.update()
+            if result.status in ("updated", "rolled_back"):
+                print(f"[UPDATE] {result.status}: {result.detail}")
+            start_background_updater(updater)
+        print(f"Version: {updater.version()}")
+
+    from core.engine import WarrantyEngine
+    from interfaces.cli import run_cli_mode
+    from interfaces.web import run_web_mode
+    from core.diagnostics import build_diagnostic_report, print_diagnostic_report
+    from core.printers.setup_service import configure_printer_binding
+    from core.printers.tsc_connector import TSCPrinterConnector
+
+    if args.self_test:
+        print("self-test ok")
+        return
+
     if args.diagnose:
         print_diagnostic_report(build_diagnostic_report())
         return
-
-    print("Created by Joel Manuel for the VA 2026")
-    print("Thanks to Steve, Anthony, Chris, and Ernes")
-
-    if not os.environ.get("WARRANTY_LABEL_DISABLE_AUTO_UPDATE"):
-        run_git_pull()
-        start_background_git_updater()
 
     if args.setup_printer:
         engine = WarrantyEngine()

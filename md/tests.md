@@ -8,7 +8,7 @@ operational serial numbers.
 
 ```bash
 python -m unittest discover -s tests -v
-python -m compileall -q core interfaces main.py tests
+python -m compileall -q core interfaces main.py updater.py tests
 npx pyright
 python tools/release_audit.py
 npm audit --audit-level=high

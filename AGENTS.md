@@ -27,7 +27,7 @@ Before submitting changes, run:
 
 ```bash
 python -m unittest discover -s tests -v
-python -m compileall -q core interfaces main.py tests
+python -m compileall -q core interfaces main.py updater.py tests
 npx pyright
 ```
 

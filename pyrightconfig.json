@@ -3,6 +3,7 @@
     "core/",
     "interfaces/",
     "main.py",
+    "updater.py",
     "tests/",
     "tools/"
   ],
