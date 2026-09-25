@@ -217,7 +217,7 @@ switch ($Command) {
         & $python -m unittest discover -s tests -v
         Assert-ExitCode "Unit tests"
         Write-Host "[2/3] Compiling Python sources" -ForegroundColor Cyan
-        & $python -m compileall -q core interfaces main.py tests
+        & $python -m compileall -q core interfaces main.py updater.py tests
         Assert-ExitCode "Compilation"
         Write-Host "[3/3] Running Pyright when Node.js is installed" -ForegroundColor Cyan
         if (Get-Command npx -ErrorAction SilentlyContinue) {

@@ -9,18 +9,32 @@ actions that are not pinned to immutable revisions.
 
 ## Source-checkout updater
 
-The application uses a deliberately small source-checkout updater. At startup,
-and then every six hours while the application is running, it fetches
-`origin/main` and applies only a fast-forward update. It refuses failed fetches,
-diverged history, and failed merges; it never resets local work, performs a
-non-fast-forward merge, or creates a merge commit. Set
-`WARRANTY_LABEL_DISABLE_AUTO_UPDATE=1` to skip the startup and background
-updater.
+`updater.py` is a self-healing source-checkout updater. It imports only the
+standard library, and `main.py` runs it before importing any application
+module, so a broken application commit cannot stop the next fix from arriving.
 
-This updater changes the checkout for the next process start. It does not
-install dependencies, run migrations, restart the current process, or replace
-the source checkout with a staged release. Those operations remain explicit
-operator/deployment responsibilities.
+At startup it fetches `origin/main` and applies only a fast-forward update. It
+refuses failed fetches, diverged history, and checkouts not on `main`, and
+never creates merge commits or discards local work. After a fast-forward:
+
+1. If `requirements.txt` or `requirements-windows.txt` changed, it installs the
+   platform requirements file into the running interpreter's environment, then
+   tries `playwright install chromium` (optional; Edge/Chrome are preferred).
+2. It runs `main.py --self-test`, which imports every application module.
+3. If the install or self-test fails, it returns to the previous commit with
+   `git reset --keep` and reinstalls the previous requirements. A commit whose
+   self-test exits non-zero is recorded in `.git/warranty-updater.json` and
+   never retried; a failed install (for example, a blocked network) or a
+   self-test that times out is retried on the next start.
+
+While the application runs, a background thread checks every six hours and
+applies only code-only updates; dependency changes wait for the next start.
+The updated code takes effect on the next start. The startup banner prints the
+running commit (`Version: <sha> (<date>)`) so operators can report it.
+
+`main.py --self-test` is part of the update contract: every future `main.py`
+must keep it working, or clients will refuse the update. Set
+`WARRANTY_LABEL_DISABLE_AUTO_UPDATE=1` to skip the updater.
 
 ## History and visibility
 

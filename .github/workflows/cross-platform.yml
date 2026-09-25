@@ -71,7 +71,7 @@ jobs:
       - name: Publication safety audit
         run: python tools/release_audit.py
       - name: Compile
-        run: python -m compileall -q core interfaces main.py tests
+        run: python -m compileall -q core interfaces main.py updater.py tests
       - name: Type check
         run: npm exec --no -- pyright
       - name: Read-only diagnostics

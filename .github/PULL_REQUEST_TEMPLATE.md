@@ -20,7 +20,7 @@ effect. Link the relevant issue when one exists.
 
 - [ ] `python -m unittest discover -s tests -v`
 - [ ] `python tools/release_audit.py`
-- [ ] `python -m compileall -q core interfaces main.py tests`
+- [ ] `python -m compileall -q core interfaces main.py updater.py tests`
 - [ ] `npx pyright`
 - [ ] macOS matrix job passed: `test (macos-latest)`
 - [ ] Windows matrix job passed: `test (windows-latest)`
