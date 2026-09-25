@@ -182,6 +182,18 @@ class UpdaterTests(unittest.TestCase):
         self.assertEqual(result.status, "refused")
         self.assertEqual(self.client_head(), local)
 
+    def test_refuses_to_move_other_branch_or_detached_head(self):
+        self.publish({"main.py": GOOD_MAIN + "# v2\n"})
+        git(self.client, "checkout", "-q", "-b", "feature")
+        feature = self.client_head()
+
+        self.assertEqual(self.updater().update().status, "refused")
+        self.assertEqual(self.client_head(), feature)
+
+        git(self.client, "checkout", "-q", "--detach")
+        self.assertEqual(self.updater().update().status, "refused")
+        self.assertEqual(self.client_head(), feature)
+
     def test_rollback_keeps_uncommitted_local_edits(self):
         (self.client / "notes.txt").write_text("keep me\n", encoding="utf-8")
         self.publish({"main.py": BROKEN_MAIN})

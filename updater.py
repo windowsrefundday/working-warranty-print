@@ -123,7 +123,10 @@ class Updater:
         state = _load_state(git_dir)
         if target in state["bad_commits"]:
             return UpdateResult("refused", f"{target[:7]} failed its self-test before")
-        ancestor = self._git(["merge-base", "--is-ancestor", "HEAD", "origin/main"])
+        branch = self._git(["symbolic-ref", "-q", "--short", "HEAD"])
+        if branch.returncode != 0 or branch.stdout.strip() != "main":
+            return UpdateResult("refused", "checkout is not on the main branch")
+        ancestor =self._git(["merge-base", "--is-ancestor", "HEAD", "origin/main"])
         if ancestor.returncode != 0:
             return UpdateResult("refused", "local history diverged from origin/main")
 
