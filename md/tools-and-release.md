@@ -14,8 +14,8 @@ standard library, and `main.py` runs it before importing any application
 module, so a broken application commit cannot stop the next fix from arriving.
 
 At startup it fetches `origin/main` and applies only a fast-forward update. It
-refuses failed fetches, diverged history, and checkouts not on `main`, and never creates merge commits or
-discards local work. After a fast-forward:
+refuses failed fetches, diverged history, and checkouts not on `main`, and
+never creates merge commits or discards local work. After a fast-forward:
 
 1. If `requirements.txt` or `requirements-windows.txt` changed, it installs the
    platform requirements file into the running interpreter's environment, then
