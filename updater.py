@@ -147,13 +147,19 @@ class Updater:
             # The app prefers system Edge/Chrome; the bundled browser is optional.
             self._call([self.python, "-m", "playwright", "install", "chromium"], timeout=900)
 
-        if not self._self_test():
-            state["bad_commits"] = (state["bad_commits"] + [target])[-MAX_BAD_COMMITS:]
-            _save_state(git_dir, state)
+        self_test_exit = self._self_test()
+        if self_test_exit != 0:
+            if self_test_exit is None:
+                # Timeout or launch failure says nothing about the commit; retry later.
+                reason = f"self-test could not complete for {target[:7]}"
+            else:
+                state["bad_commits"] = (state["bad_commits"] + [target])[-MAX_BAD_COMMITS:]
+                _save_state(git_dir, state)
+                reason = f"self-test failed for {target[:7]}"
             return self._rollback(
                 previous,
                 restore_dependencies=dependencies_changed,
-                reason=f"self-test failed for {target[:7]}",
+                reason=reason,
             )
 
         state["last_good"] = target
@@ -184,13 +190,19 @@ class Updater:
         command = [self.python, "-m", "pip", "install", "--disable-pip-version-check", "-r", path]
         return self._call(command, timeout=900)
 
-    def _self_test(self) -> bool:
+    def _self_test(self) -> int | None:
+        """Return the self-test exit code, or None if it could not complete."""
         env = dict(os.environ)
         env[DISABLE_ENV] = "1"
         command = [self.python, os.path.join(self.repo_root, "main.py"), "--self-test"]
-        return self._call(command, timeout=180, env=env)
+        return self._exit_code(command, timeout=180, env=env)
 
     def _call(self, command: Sequence[str], *, timeout: float, env: dict[str, str] | None = None) -> bool:
+        return self._exit_code(command, timeout=timeout, env=env) == 0
+
+    def _exit_code(
+        self, command: Sequence[str], *, timeout: float, env: dict[str, str] | None = None
+    ) -> int | None:
         try:
             result = self._run(
                 list(command),
@@ -201,17 +213,20 @@ class Updater:
                 env=env,
             )
         except (OSError, subprocess.SubprocessError):
-            return False
-        return result.returncode == 0
+            return None
+        return result.returncode
 
     def _git(self, args: Sequence[str], *, timeout: float = 10) -> subprocess.CompletedProcess:
         assert self.git is not None
+        # Never block startup on a credential prompt or dialog.
+        env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never")
         return self._run(
             [self.git, *args],
             cwd=self.repo_root,
             capture_output=True,
             text=True,
             timeout=timeout,
+            env=env,
         )
 
     def _rev_parse(self, ref: str) -> str | None:

@@ -14,7 +14,7 @@ standard library, and `main.py` runs it before importing any application
 module, so a broken application commit cannot stop the next fix from arriving.
 
 At startup it fetches `origin/main` and applies only a fast-forward update. It
-refuses failed fetches and diverged history, and never creates merge commits or
+refuses failed fetches, diverged history, and checkouts not on `main`, and never creates merge commits or
 discards local work. After a fast-forward:
 
 1. If `requirements.txt` or `requirements-windows.txt` changed, it installs the
@@ -22,10 +22,10 @@ discards local work. After a fast-forward:
    tries `playwright install chromium` (optional; Edge/Chrome are preferred).
 2. It runs `main.py --self-test`, which imports every application module.
 3. If the install or self-test fails, it returns to the previous commit with
-   `git reset --keep` and reinstalls the previous requirements. A commit that
-   fails its self-test is recorded in `.git/warranty-updater.json` and never
-   retried; a failed install (for example, a blocked network) is retried on the
-   next start.
+   `git reset --keep` and reinstalls the previous requirements. A commit whose
+   self-test exits non-zero is recorded in `.git/warranty-updater.json` and
+   never retried; a failed install (for example, a blocked network) or a
+   self-test that times out is retried on the next start.
 
 While the application runs, a background thread checks every six hours and
 applies only code-only updates; dependency changes wait for the next start.

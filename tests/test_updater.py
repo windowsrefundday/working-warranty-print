@@ -182,6 +182,45 @@ class UpdaterTests(unittest.TestCase):
         self.assertEqual(result.status, "refused")
         self.assertEqual(self.client_head(), local)
 
+    def test_self_test_timeout_rolls_back_without_blacklisting_commit(self):
+        previous = self.client_head()
+        target = self.publish({"main.py": GOOD_MAIN + "# v2\n"})
+        timeouts = {"remaining": 1}
+
+        def slow_machine(command, **kwargs):
+            if "--self-test" in command and timeouts["remaining"]:
+                timeouts["remaining"] -= 1
+                raise subprocess.TimeoutExpired(command, kwargs.get("timeout", 0))
+            return subprocess.run(command, **kwargs)
+
+        slow = Updater(
+            str(self.client),
+            python_executable=sys.executable,
+            run=slow_machine,
+            platform="linux",
+            log=lambda _message: None,
+        )
+
+        self.assertEqual(slow.update().status, "rolled_back")
+        self.assertEqual(self.client_head(), previous)
+        self.assertEqual(slow.update().status, "updated")
+        self.assertEqual(self.client_head(), target)
+
+    def test_git_commands_never_prompt_for_credentials(self):
+        seen = []
+
+        def record(command, **kwargs):
+            if command[0] == shutil.which("git"):
+                seen.append(kwargs.get("env") or {})
+            return subprocess.run(command, **kwargs)
+
+        Updater(str(self.client), run=record, log=lambda _m: None).update()
+
+        self.assertTrue(seen)
+        for env in seen:
+            self.assertEqual(env.get("GIT_TERMINAL_PROMPT"), "0")
+            self.assertEqual(env.get("GCM_INTERACTIVE"), "never")
+
     def test_refuses_to_move_other_branch_or_detached_head(self):
         self.publish({"main.py": GOOD_MAIN + "# v2\n"})
         git(self.client, "checkout", "-q", "-b", "feature")
